@@ -20,8 +20,9 @@ class ScriptKeepAliveTransformerTest {
 
         Assertions.assertFalse(output.contains("await context.close();"));
         Assertions.assertFalse(output.contains("await browser.close();"));
-        Assertions.assertTrue(output.contains("  await new Promise(() => {});"));
-        Assertions.assertTrue(output.indexOf("await new Promise(() => {});") < output.indexOf("})();"));
+        Assertions.assertTrue(output.contains("await new Promise((resolve) => {"));
+        Assertions.assertTrue(output.contains("browser.isConnected()"));
+        Assertions.assertTrue(output.indexOf("await new Promise((resolve) => {") < output.indexOf("})();"));
     }
 
     @Test
@@ -34,8 +35,23 @@ class ScriptKeepAliveTransformerTest {
                 """;
 
         String output = ScriptKeepAliveTransformer.apply(input);
-        Assertions.assertTrue(output.contains("  await new Promise(() => {});"));
-        Assertions.assertTrue(output.indexOf("await new Promise(() => {});") < output.indexOf("})();"));
+        Assertions.assertFalse(output.contains("await new Promise(() => {});"));
+        Assertions.assertTrue(output.contains("await new Promise((resolve) => {"));
+        Assertions.assertTrue(output.indexOf("await new Promise((resolve) => {") < output.indexOf("})();"));
+    }
+
+    @Test
+    void removesUnsupportedWaitForEventKeepAlive() {
+        String input = """
+                (async () => {
+                  console.log("done");
+                })();
+                await browser.waitForEvent('disconnected');
+                """;
+
+        String output = ScriptKeepAliveTransformer.apply(input);
+        Assertions.assertFalse(output.contains("await browser.waitForEvent('disconnected');"));
+        Assertions.assertTrue(output.contains("await new Promise((resolve) => {"));
     }
 
     @Test
@@ -70,5 +86,26 @@ class ScriptKeepAliveTransformerTest {
         int last = output.lastIndexOf("await context.close();");
         Assertions.assertTrue(first >= 0);
         Assertions.assertEquals(first, last);
+    }
+
+    @Test
+    void isIdempotentAcrossRepeatedTransformations() {
+        String input = """
+                (async () => {
+                  await context.close();
+                })();
+                await new Promise(() => {});
+                """;
+
+        String once = ScriptKeepAliveTransformer.apply(input);
+        String twice = ScriptKeepAliveTransformer.apply(once);
+
+        Assertions.assertEquals(once, twice);
+        Assertions.assertFalse(twice.contains("await new Promise(() => {});"));
+        Assertions.assertFalse(twice.contains("await browser.waitForEvent('disconnected');"));
+        Assertions.assertEquals(
+                twice.indexOf("await new Promise((resolve) => {"),
+                twice.lastIndexOf("await new Promise((resolve) => {")
+        );
     }
 }

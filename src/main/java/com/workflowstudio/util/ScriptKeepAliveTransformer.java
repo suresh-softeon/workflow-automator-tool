@@ -4,7 +4,10 @@ import java.util.ArrayList;
 import java.util.List;
 
 public final class ScriptKeepAliveTransformer {
-    private static final String KEEP_ALIVE = "await new Promise(() => {});";
+    private static final String KEEP_ALIVE =
+            "await new Promise((resolve) => { const __keepAliveInterval = setInterval(() => { if (!browser.isConnected()) { clearInterval(__keepAliveInterval); resolve(); } }, 250); });";
+    private static final String UNSUPPORTED_KEEP_ALIVE = "await browser.waitForEvent('disconnected');";
+    private static final String LEGACY_KEEP_ALIVE = "await new Promise(() => {});";
     private static final String BROWSER_CLOSE = "await browser.close();";
     private static final String IIFE_END = "})();";
 
@@ -18,7 +21,10 @@ public final class ScriptKeepAliveTransformer {
 
         for (String line : rawLines) {
             String trimmed = line.trim();
-            if (trimmed.equals(KEEP_ALIVE) || trimmed.equals(BROWSER_CLOSE)) {
+            if (trimmed.equals(KEEP_ALIVE)
+                    || trimmed.equals(UNSUPPORTED_KEEP_ALIVE)
+                    || trimmed.equals(LEGACY_KEEP_ALIVE)
+                    || trimmed.equals(BROWSER_CLOSE)) {
                 continue;
             }
             lines.add(line);

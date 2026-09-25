@@ -13,15 +13,21 @@ import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.ExecutorService;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 public final class DefaultExecutionService implements ExecutionService {
     private final WorkflowRepository workflowRepository;
     private final ScriptExecutor scriptExecutor;
     private final AppPaths appPaths;
     private final ExecutorService executorService;
+    private final AtomicReference<Process> activeProcess = new AtomicReference<>();
 
     public DefaultExecutionService(
             WorkflowRepository workflowRepository,
@@ -46,7 +52,12 @@ public final class DefaultExecutionService implements ExecutionService {
                 .map(metadata -> appPaths.root().resolve(metadata.scriptPath()))
                 .orElseThrow(() -> new IllegalArgumentException("Workflow not found."));
 
-        Process process = scriptExecutor.start(scriptPath);
+        Process process;
+        synchronized (this) {
+            terminateActivePlayback(logConsumer);
+            process = scriptExecutor.start(scriptPath);
+            activeProcess.set(process);
+        }
         ExecutionSession session = new ExecutionSession(process.pid(), Instant.now());
         session.updateStatus(ExecutionStatus.RUNNING);
         logConsumer.accept("[INFO] Playback started. PID=" + process.pid() + " at " + session.startTime());
@@ -67,11 +78,44 @@ public final class DefaultExecutionService implements ExecutionService {
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
                 session.updateStatus(ExecutionStatus.FAILED);
+                process.destroyForcibly();
                 logConsumer.accept("[ERR] Playback wait interrupted.");
+            } finally {
+                activeProcess.compareAndSet(process, null);
             }
         });
 
         return session;
+    }
+
+    private void terminateActivePlayback(Consumer<String> logConsumer) {
+        Process existing = activeProcess.get();
+        if (existing == null || !existing.isAlive()) {
+            return;
+        }
+
+        logConsumer.accept("[INFO] Previous playback still running (PID=" + existing.pid() + "). Stopping it before new run.");
+        ProcessHandle handle = existing.toHandle();
+        List<ProcessHandle> descendants = new ArrayList<>(handle.descendants().collect(Collectors.toList()));
+        for (ProcessHandle descendant : descendants) {
+            descendant.destroy();
+        }
+        existing.destroy();
+
+        try {
+            if (!existing.waitFor(5, TimeUnit.SECONDS)) {
+                for (ProcessHandle descendant : descendants) {
+                    if (descendant.isAlive()) {
+                        descendant.destroyForcibly();
+                    }
+                }
+                existing.destroyForcibly();
+                existing.waitFor(3, TimeUnit.SECONDS);
+            }
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            existing.destroyForcibly();
+        }
     }
 
     private void streamLines(InputStream stream, Consumer<String> onLine) {
