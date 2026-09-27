@@ -109,6 +109,16 @@ Startup validation checks Node and Playwright before opening the app.
 mvn javafx:run
 ```
 
+## Build a runnable JAR
+
+```bash
+mvn clean package
+java -jar target/workflow-studio-1.0.0-SNAPSHOT-all.jar
+```
+
+Use the `-all.jar` artifact for launching (it includes the app entrypoint + dependencies).  
+For distribution, build on each target OS separately (macOS build for macOS, Windows build for Windows), because JavaFX runtime natives are platform-specific.
+
 ## Tech stack
 
 - Java 17
