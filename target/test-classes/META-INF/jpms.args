@@ -1,0 +1,4 @@
+--patch-module
+com.workflowstudio=_
+--add-reads
+com.workflowstudio=ALL-UNNAMED
