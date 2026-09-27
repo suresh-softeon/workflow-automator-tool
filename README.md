@@ -131,7 +131,7 @@ For distribution, build on each target OS separately (macOS build for macOS, Win
 
 By default, app data is stored in:
 
-- Windows: `%USERPROFILE%\Workflow Studio`
+- Windows: `D:\Workflow Studio` (if `D:` exists), otherwise `%USERPROFILE%\Workflow Studio`
 - Or custom path via `WORKFLOW_STUDIO_HOME` environment variable
 
 Inside that root, the app maintains:

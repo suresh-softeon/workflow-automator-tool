@@ -24,11 +24,7 @@ public final class AppPaths {
 
         String os = System.getProperty("os.name", "").toLowerCase();
         if (os.contains("win")) {
-            String userProfile = System.getenv("USERPROFILE");
-            if (userProfile == null || userProfile.isBlank()) {
-                userProfile = System.getProperty("user.home");
-            }
-            Path path = Path.of(userProfile, APP_NAME);
+            Path path = resolveWindowsRoot();
             System.setProperty("workflow.studio.home", path.toString());
             return new AppPaths(path);
         }
@@ -36,6 +32,19 @@ public final class AppPaths {
         Path path = Path.of(System.getProperty("user.home"), APP_NAME);
         System.setProperty("workflow.studio.home", path.toString());
         return new AppPaths(path);
+    }
+
+    private static Path resolveWindowsRoot() {
+        Path dDrive = Path.of("D:\\");
+        if (Files.isDirectory(dDrive)) {
+            return dDrive.resolve(APP_NAME);
+        }
+
+        String userProfile = System.getenv("USERPROFILE");
+        if (userProfile == null || userProfile.isBlank()) {
+            userProfile = System.getProperty("user.home");
+        }
+        return Path.of(userProfile, APP_NAME);
     }
 
     public void ensureDirectories() throws IOException {
