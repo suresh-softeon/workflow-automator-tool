@@ -1,0 +1,5 @@
+com/workflowstudio/service/DefaultProjectCatalogServiceTest$InMemoryCatalogRepository.class
+com/workflowstudio/service/DefaultProjectCatalogServiceTest.class
+com/workflowstudio/validation/WorkflowValidatorTest$InMemoryWorkflowRepository.class
+com/workflowstudio/util/ScriptKeepAliveTransformerTest.class
+com/workflowstudio/validation/WorkflowValidatorTest.class

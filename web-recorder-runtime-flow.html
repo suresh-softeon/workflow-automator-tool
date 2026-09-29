@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Workflow Studio - Web Recorder Runtime Flow</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 24px; line-height: 1.45; color: #1f2937; }
+    h1, h2, h3 { margin-top: 24px; }
+    code { background: #f3f4f6; padding: 2px 6px; border-radius: 4px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+    th, td { border: 1px solid #d1d5db; padding: 10px; text-align: left; vertical-align: top; }
+    th { background: #f9fafb; }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .block { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px; }
+  </style>
+</head>
+<body>
+  <h1>Workflow Studio - Web Recorder Flow (Code-Level)</h1>
+  <p>
+    This document explains how the Web Recorder works in this application: how launch happens,
+    which methods are called for each button click, where data is stored, and how logging works.
+  </p>
+
+  <h2>1) App Launch Flow</h2>
+  <div class="block mono">
+    WorkflowStudioMain.main(...)<br/>
+    -> Application.launch(ApplicationLauncher.class, args)<br/>
+    -> ApplicationLauncher.start(Stage)<br/>
+    -> ApplicationContext.create() (wires repositories/services/executors)<br/>
+    -> StartupCoordinator.startupAsync(...)<br/>
+    -> on success: ApplicationLauncher.showHome()
+  </div>
+  <p>
+    Key files: <code>WorkflowStudioMain.java</code>, <code>ApplicationLauncher.java</code>, <code>ApplicationContext.java</code>.
+  </p>
+
+  <h2>2) Navigation to Web Recorder</h2>
+  <div class="block mono">
+    Home button click<br/>
+    -> ApplicationLauncher.showRecorder()<br/>
+    -> new RecorderView(...).createScene()<br/>
+    -> Theme applied via ThemeManager
+  </div>
+  <p>
+    Key file: <code>RecorderView.java</code>.
+  </p>
+
+  <h2>3) Web Recorder UI Action -> Method -> Effect</h2>
+  <table>
+    <thead>
+      <tr>
+        <th>UI Action</th>
+        <th>Method Call Chain</th>
+        <th>What Happens On Screen / In System</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>Click <b>+</b> near Project</td>
+        <td class="mono">RecorderView.addProjectButton.setOnAction(...) -> ProjectCatalogService.addProject(...) -> JsonProjectCatalogRepository.save(...)</td>
+        <td>Project list updates in Project dropdown and is persisted to catalog JSON.</td>
+      </tr>
+      <tr>
+        <td>Click <b>-</b> near Project</td>
+        <td class="mono">RecorderView.deleteProjectButton.setOnAction(...) -> ProjectCatalogService.deleteProject(...) -> JsonProjectCatalogRepository.save(...)</td>
+        <td>Selected project/submodules removed from catalog JSON.</td>
+      </tr>
+      <tr>
+        <td>Click <b>+</b> near Submodule</td>
+        <td class="mono">RecorderView.addSubmoduleButton.setOnAction(...) -> ProjectCatalogService.addSubmodule(...) -> JsonProjectCatalogRepository.save(...)</td>
+        <td>Submodule list refreshes and is persisted.</td>
+      </tr>
+      <tr>
+        <td>Click <b>-</b> near Submodule</td>
+        <td class="mono">RecorderView.deleteSubmoduleButton.setOnAction(...) -> ProjectCatalogService.deleteSubmodule(...) -> JsonProjectCatalogRepository.save(...)</td>
+        <td>Selected submodule removed and dropdown refreshed.</td>
+      </tr>
+      <tr>
+        <td>Click <b>Start Recording</b></td>
+        <td class="mono">RecorderView.start.setOnAction(...) -> WorkflowService.screenExists(...) validation -> RecordingService.startRecording(...) -> PlaywrightCodegenRecorder.startRecording(...)</td>
+        <td>
+          If valid, launches <code>npx playwright codegen --target javascript --output ...</code>, disables Start/Save, enables Stop, and begins writing process output to Recording Console.
+        </td>
+      </tr>
+      <tr>
+        <td>Click <b>Stop Recording</b></td>
+        <td class="mono">RecorderView.stop.setOnAction(...) -> RecordingService.stopRecording(...) -> PlaywrightCodegenRecorder.stopRecording(...)</td>
+        <td>
+          Codegen process is stopped, generated temp script is read, script text is loaded into the Generated Script editor, Save button is enabled.
+        </td>
+      </tr>
+      <tr>
+        <td>Click <b>Save</b></td>
+        <td class="mono">RecorderView.save.setOnAction(...) -> WorkflowService.saveGeneratedWorkflow(...) -> FileScriptRepository.saveScript(...) + JsonWorkflowRepository.upsert(...)</td>
+        <td>
+          Script is transformed (keep browser open behavior), written to scripts folder, metadata is written to <code>projects.json</code>, success dialog shown.
+        </td>
+      </tr>
+      <tr>
+        <td>Click Theme icon</td>
+        <td class="mono">RecorderView.themeBtn.setOnAction(...) -> SettingsService.saveTheme(...) -> ThemeManager.applyTheme(...)</td>
+        <td>Theme cycles Dark/Light/System and persists to settings file.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2>4) Save Operation - Exact Storage Responsibilities</h2>
+  <h3>A) Script file write</h3>
+  <p>
+    <code>DefaultWorkflowService.saveGeneratedWorkflow(...)</code> builds relative path:
+    <span class="mono">scripts/&lt;project&gt;/&lt;submodule&gt;/&lt;screen&gt;.js</span>
+  </p>
+  <p>
+    Then <code>FileScriptRepository.saveScript(...)</code>:
+  </p>
+  <ul>
+    <li>Creates directories if needed.</li>
+    <li>Applies <code>ScriptKeepAliveTransformer.apply(script)</code> (removes close calls and keeps browser open).</li>
+    <li>Writes final JS to disk.</li>
+  </ul>
+
+  <h3>B) Metadata write</h3>
+  <p>
+    <code>DefaultWorkflowService.saveGeneratedWorkflow(...)</code> creates a <code>WorkflowMetadata</code> object and calls
+    <code>JsonWorkflowRepository.upsert(...)</code>.
+  </p>
+  <p>
+    <code>JsonWorkflowRepository</code> persists metadata in:
+    <span class="mono">data/projects.json</span> using atomic temp-file move.
+  </p>
+
+  <h3>C) Project/Submodule catalog</h3>
+  <p>
+    Project/submodule names are maintained in:
+    <span class="mono">data/project-catalog.json</span> by <code>JsonProjectCatalogRepository</code>.
+  </p>
+
+  <h3>D) Theme setting</h3>
+  <p>
+    Theme is saved by <code>JsonSettingsRepository</code> into:
+    <span class="mono">settings/theme.json</span>.
+  </p>
+
+  <h2>5) Where Files Are Stored (Root Path Resolution)</h2>
+  <p><code>AppPaths.resolve()</code> decides root as:</p>
+  <ol>
+    <li><code>WORKFLOW_STUDIO_HOME</code> env var (if provided)</li>
+    <li>Windows: <code>%APPDATA%/Workflow Studio</code></li>
+    <li>macOS/Linux: <code>~/.workflow-studio</code></li>
+  </ol>
+  <p>Under that root:</p>
+  <ul>
+    <li><span class="mono">data/projects.json</span> (workflow metadata)</li>
+    <li><span class="mono">data/project-catalog.json</span> (project/submodule catalog)</li>
+    <li><span class="mono">scripts/.../*.js</span> (saved scripts)</li>
+    <li><span class="mono">settings/theme.json</span> (theme)</li>
+    <li><span class="mono">logs/application.log</span> (application logs)</li>
+  </ul>
+
+  <h2>6) Logging - How and Where</h2>
+  <p>
+    SLF4J + Logback is configured in <code>src/main/resources/logback.xml</code>.
+  </p>
+  <ul>
+    <li>Main log file: <span class="mono">${workflow.studio.home}/logs/application.log</span></li>
+    <li>Rotation file pattern: <span class="mono">application_%i.log</span></li>
+    <li>Roll condition: max size <b>100MB</b></li>
+    <li>Root log level: <b>INFO</b></li>
+  </ul>
+  <p>
+    Runtime examples:
+    <code>PlaywrightCodegenRecorder</code> logs recording start,
+    <code>DefaultWorkflowService</code> logs save/delete,
+    <code>PlaywrightScriptExecutor</code> logs playback start.
+  </p>
+
+  <h2>7) Playback (Projects Screen) - Short Flow</h2>
+  <div class="block mono">
+    ProjectsView Play click<br/>
+    -> ExecutionService.executeWorkflow(..., logConsumer)<br/>
+    -> DefaultExecutionService resolves script from projects.json metadata<br/>
+    -> PlaywrightScriptExecutor.start(node script)<br/>
+    -> stdout/stderr streamed to Execution Console ([OUT]/[ERR])<br/>
+    -> completion line with exitCode
+  </div>
+
+  <h2>8) Error Handling Notes</h2>
+  <ul>
+    <li>UI validations (missing project/submodule/screen, duplicate screen) are blocked before long-running actions.</li>
+    <li>Storage/process failures throw <code>IllegalStateException</code> and are surfaced via UI error alerts.</li>
+    <li>Console streaming shows process output during recording and playback for easier diagnosis.</li>
+  </ul>
+</body>
+</html>
