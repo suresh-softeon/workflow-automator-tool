@@ -103,6 +103,53 @@ The Projects screen is for browsing, replaying, previewing, and deleting saved w
 
 Startup validation checks Node and Playwright before opening the app.
 
+### Installing Node.js
+
+- **Windows**: download the LTS installer from [nodejs.org](https://nodejs.org/) and run it, or install via winget:
+  ```bash
+  winget install OpenJS.NodeJS.LTS
+  ```
+- **macOS**: 
+  ```bash
+  brew install node
+  ```
+- **Linux (Debian/Ubuntu)**:
+  ```bash
+  curl -fsSL https://deb.nodesource.com/setup_lts.x | sudo -E bash -
+  sudo apt-get install -y nodejs
+  ```
+
+Verify the install:
+```bash
+node -v
+npm -v
+```
+
+### Installing Playwright
+
+Install Playwright globally so it can be resolved by scripts run outside a project folder, then download the browser binaries:
+```bash
+npm install -g playwright
+npx playwright install
+```
+
+Verify the install:
+```bash
+npx playwright --version
+```
+
+### Troubleshooting: `Cannot find module 'playwright'`
+
+If script playback fails with `Error: Cannot find module 'playwright'`, it means Node can't resolve the global Playwright install. Find where npm installed it:
+```bash
+npm root -g
+```
+Confirm a `playwright` folder exists inside that path, then (on Windows) set a `NODE_PATH` environment variable to that path via System Properties → Environment Variables, or:
+```powershell
+[Environment]::SetEnvironmentVariable("NODE_PATH", "<path from npm root -g>", "User")
+```
+Restart the terminal/app afterward so the new environment variable takes effect.
+
 ## Run locally
 
 ```bash
