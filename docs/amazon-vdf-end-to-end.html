@@ -1,0 +1,286 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Amazon Vendor Direct Fulfillment - End to End, Explained Simply</title>
+  <style>
+    body { font-family: Arial, Helvetica, sans-serif; color: #232f3e; background: #f4f6f8; margin: 0; line-height: 1.6; }
+    header { background: #232f3e; color: #fff; padding: 32px 20px; text-align: center; }
+    header h1 { margin: 0 0 8px; font-size: 28px; }
+    header p { margin: 0; color: #febd69; }
+    main { max-width: 980px; margin: 0 auto; padding: 20px; }
+    section { background: #fff; border-radius: 10px; padding: 22px 26px; margin: 22px 0; box-shadow: 0 1px 4px rgba(0,0,0,.12); }
+    h2 { margin-top: 0; color: #146eb4; border-bottom: 2px solid #febd69; padding-bottom: 6px; }
+    h3 { color: #232f3e; }
+    .note { background: #fff8e1; border-left: 5px solid #febd69; padding: 10px 14px; margin: 14px 0; }
+    .warn { background: #fdecea; border-left: 5px solid #d13212; padding: 10px 14px; margin: 14px 0; }
+    .ok { background: #e8f5e9; border-left: 5px solid #2e7d32; padding: 10px 14px; margin: 14px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 12px 0; }
+    th, td { border: 1px solid #cfd6dd; padding: 8px 10px; text-align: left; vertical-align: top; }
+    th { background: #232f3e; color: #fff; }
+    svg { max-width: 100%; height: auto; display: block; margin: 14px auto; }
+    code { background: #eef1f4; padding: 1px 5px; border-radius: 3px; }
+    pre { background: #232f3e; color: #e8e8e8; padding: 14px; border-radius: 6px; overflow-x: auto; }
+    .step { display: flex; gap: 14px; margin: 14px 0; }
+    .num { flex: 0 0 38px; height: 38px; border-radius: 50%; background: #146eb4; color: #fff; font-weight: bold; text-align: center; line-height: 38px; }
+    footer { text-align: center; color: #667; font-size: 13px; padding: 20px; }
+  </style>
+</head>
+<body>
+<header>
+  <h1>Amazon Vendor Direct Fulfillment (VDF)</h1>
+  <p>The whole journey of an order, from the customer's click to the parcel on the doorstep</p>
+</header>
+
+<main>
+
+  <section>
+    <h2>1. The one-minute story</h2>
+    <p>Think of Amazon as a <b>shop window</b> and your company as the <b>warehouse behind it</b>.</p>
+    <ul>
+      <li>A customer buys a product on Amazon's website.</li>
+      <li>Amazon does <b>not</b> hold that product. <b>You</b> do.</li>
+      <li>So Amazon sends you a <b>Purchase Order (PO)</b>: "Please send this item to this customer."</li>
+      <li>You check the PO, say yes or no, ship the parcel, and tell Amazon the tracking number.</li>
+    </ul>
+    <svg width="760" height="170" viewBox="0 0 760 170" role="img" aria-label="Amazon to vendor to customer">
+      <defs><marker id="a1" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#232f3e"/></marker></defs>
+      <rect x="10" y="40" width="190" height="90" rx="10" fill="#febd69"/>
+      <text x="105" y="75" text-anchor="middle" font-size="18" font-weight="bold">AMAZON</text>
+      <text x="105" y="98" text-anchor="middle" font-size="13">Sells to the customer</text>
+      <text x="105" y="116" text-anchor="middle" font-size="13">Sends you the PO</text>
+      <rect x="285" y="40" width="190" height="90" rx="10" fill="#146eb4"/>
+      <text x="380" y="75" text-anchor="middle" font-size="18" font-weight="bold" fill="#fff">YOUR COMPANY</text>
+      <text x="380" y="98" text-anchor="middle" font-size="13" fill="#fff">Holds the stock</text>
+      <text x="380" y="116" text-anchor="middle" font-size="13" fill="#fff">Packs and ships</text>
+      <rect x="560" y="40" width="190" height="90" rx="10" fill="#c8e6c9"/>
+      <text x="655" y="75" text-anchor="middle" font-size="18" font-weight="bold">CUSTOMER</text>
+      <text x="655" y="98" text-anchor="middle" font-size="13">Receives the parcel</text>
+      <line x1="200" y1="70" x2="283" y2="70" stroke="#232f3e" stroke-width="2.5" marker-end="url(#a1)"/>
+      <text x="242" y="62" text-anchor="middle" font-size="12">PO</text>
+      <line x1="475" y1="85" x2="558" y2="85" stroke="#232f3e" stroke-width="2.5" marker-end="url(#a1)"/>
+      <text x="517" y="77" text-anchor="middle" font-size="12">Parcel</text>
+      <line x1="283" y1="115" x2="202" y2="115" stroke="#232f3e" stroke-width="2.5" marker-end="url(#a1)"/>
+      <text x="242" y="132" text-anchor="middle" font-size="12">Accept + tracking</text>
+    </svg>
+  </section>
+
+  <section>
+    <h2>2. Why do WE pull the order and create it in DOMS?</h2>
+    <p><b>Amazon owns the customer's order. You own the fulfillment.</b> Amazon can't ship what it doesn't have.</p>
+    <table>
+      <tr><th>Question</th><th>Simple answer</th></tr>
+      <tr><td>Why doesn't Amazon do everything?</td><td>The stock, the warehouse and the carriers are yours. Amazon has no access to them.</td></tr>
+      <tr><td>Why create the order in DOMS?</td><td>The Amazon PO is only a request. Your systems need their own order to reserve stock, plan shipping, invoice and report.</td></tr>
+      <tr><td>Why do we "pull" it?</td><td>Amazon publishes new POs through an API and you fetch them regularly. It works the same way for every vendor.</td></tr>
+      <tr><td>Why do we have to acknowledge?</td><td>Only you know whether you can really ship (stock, valid SKU). Amazon wants a yes or no, normally within 24 hours.</td></tr>
+    </table>
+    <div class="note"><b>In one line:</b> Amazon sells, you fulfill. The API is how Amazon hands you the sale, and DOMS is how you turn it into a shipment.</div>
+  </section>
+
+  <section>
+    <h2>3. The cast of characters</h2>
+    <table>
+      <tr><th>Who / what</th><th>What it is</th><th>Plain-English role</th></tr>
+      <tr><td>Customer</td><td>Person buying on Amazon</td><td>Places the order</td></tr>
+      <tr><td>Amazon</td><td>The marketplace</td><td>Takes the order and payment, sends the PO</td></tr>
+      <tr><td>SP-API</td><td>Amazon's "Selling Partner" API</td><td>The doorway through which your systems talk to Amazon</td></tr>
+      <tr><td>DOMS</td><td>Your order management module</td><td>Pulls POs, creates the order, sends acknowledgements</td></tr>
+      <tr><td>SAP / WMS</td><td>Your ERP and warehouse system</td><td>Reserves stock, picks, packs and ships</td></tr>
+      <tr><td>Carrier</td><td>UPS, FedEx and so on</td><td>Delivers the parcel</td></tr>
+    </table>
+  </section>
+
+  <section>
+    <h2>4. End-to-end flow (the big picture)</h2>
+    <svg width="880" height="520" viewBox="0 0 880 520" role="img" aria-label="End to end flow">
+      <defs><marker id="a2" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#232f3e"/></marker></defs>
+      <rect x="10" y="10" width="200" height="40" rx="6" fill="#232f3e"/>
+      <text x="110" y="35" text-anchor="middle" fill="#fff" font-weight="bold">AMAZON</text>
+      <rect x="340" y="10" width="200" height="40" rx="6" fill="#146eb4"/>
+      <text x="440" y="35" text-anchor="middle" fill="#fff" font-weight="bold">DOMS</text>
+      <rect x="670" y="10" width="200" height="40" rx="6" fill="#2e7d32"/>
+      <text x="770" y="35" text-anchor="middle" fill="#fff" font-weight="bold">SAP / WAREHOUSE</text>
+      <line x1="110" y1="50" x2="110" y2="510" stroke="#9aa5b1" stroke-dasharray="5,5"/>
+      <line x1="440" y1="50" x2="440" y2="510" stroke="#9aa5b1" stroke-dasharray="5,5"/>
+      <line x1="770" y1="50" x2="770" y2="510" stroke="#9aa5b1" stroke-dasharray="5,5"/>
+
+      <line x1="440" y1="85" x2="112" y2="85" stroke="#232f3e" stroke-width="2" marker-end="url(#a2)"/>
+      <text x="275" y="78" text-anchor="middle" font-size="12">1. getOrders: "any new POs?"</text>
+      <line x1="110" y1="120" x2="438" y2="120" stroke="#232f3e" stroke-width="2" marker-end="url(#a2)"/>
+      <text x="275" y="113" text-anchor="middle" font-size="12">2. PO details (JSON)</text>
+      <line x1="440" y1="155" x2="768" y2="155" stroke="#232f3e" stroke-width="2" marker-end="url(#a2)"/>
+      <text x="605" y="148" text-anchor="middle" font-size="12">3. Create the order (IDoc)</text>
+      <line x1="770" y1="190" x2="442" y2="190" stroke="#232f3e" stroke-width="2" marker-end="url(#a2)"/>
+      <text x="605" y="183" text-anchor="middle" font-size="12">4. Stock OK? SKU valid?</text>
+      <line x1="440" y1="225" x2="112" y2="225" stroke="#232f3e" stroke-width="2" marker-end="url(#a2)"/>
+      <text x="275" y="218" text-anchor="middle" font-size="12">5. Acknowledge: 00 = yes, 02 = no</text>
+      <line x1="110" y1="260" x2="438" y2="260" stroke="#232f3e" stroke-width="2" marker-end="url(#a2)"/>
+      <text x="275" y="253" text-anchor="middle" font-size="12">6. transactionId ("received")</text>
+      <line x1="440" y1="295" x2="112" y2="295" stroke="#232f3e" stroke-width="2" marker-end="url(#a2)"/>
+      <text x="275" y="288" text-anchor="middle" font-size="12">7. Check transaction status</text>
+      <line x1="770" y1="335" x2="772" y2="335" stroke="#232f3e"/>
+      <text x="770" y="330" text-anchor="middle" font-size="12">8. Pick, pack, ship</text>
+      <line x1="770" y1="370" x2="442" y2="370" stroke="#232f3e" stroke-width="2" marker-end="url(#a2)"/>
+      <text x="605" y="363" text-anchor="middle" font-size="12">9. Shipped + tracking number</text>
+      <line x1="440" y1="405" x2="112" y2="405" stroke="#232f3e" stroke-width="2" marker-end="url(#a2)"/>
+      <text x="275" y="398" text-anchor="middle" font-size="12">10. Shipment confirmation</text>
+      <line x1="440" y1="445" x2="112" y2="445" stroke="#232f3e" stroke-width="2" marker-end="url(#a2)"/>
+      <text x="275" y="438" text-anchor="middle" font-size="12">11. Invoice</text>
+      <text x="440" y="490" text-anchor="middle" font-size="13" font-weight="bold">Amazon pays you after the invoice</text>
+    </svg>
+  </section>
+
+  <section>
+    <h2>5. The flow, step by step</h2>
+
+    <div class="step"><div class="num">1</div><div>
+      <b>Customer buys on Amazon.</b><br>
+      Amazon knows you stock this item, so it creates a Purchase Order (PO) for you.
+    </div></div>
+
+    <div class="step"><div class="num">2</div><div>
+      <b>DOMS asks Amazon for new orders (<code>getOrders</code>).</b><br>
+      It is like checking a mailbox. DOMS asks for POs created in a time window and goes through them page by page.
+    </div></div>
+
+    <div class="step"><div class="num">3</div><div>
+      <b>DOMS creates the order on your side.</b><br>
+      The PO number (for example <code>6K9Z13PL</code>), the ship-to address, the product and the quantity are copied into your own order.
+      It is then passed to SAP as an <code>ORDERS05</code> IDoc.
+    </div></div>
+
+    <div class="step"><div class="num">4</div><div>
+      <b>Check: can we really ship this?</b><br>
+      Is the item in stock? Is the SKU valid? Is the address serviceable?
+    </div></div>
+
+    <div class="step"><div class="num">5</div><div>
+      <b>Send the acknowledgement (<code>submitAcknowledgement</code>).</b><br>
+      Amazon expects this within <b>24 hours</b>.
+      <table>
+        <tr><th>Code</th><th>Meaning</th><th>Description to send</th></tr>
+        <tr><td><code>00</code></td><td>Accept: we will ship it all</td><td>Shipping 100 percent of ordered product</td></tr>
+        <tr><td><code>02</code></td><td>Reject: we cannot ship</td><td>A reason, e.g. Canceled due to missing/invalid SKU</td></tr>
+      </table>
+      The answer is for the <b>whole order</b>, not part of it, and it must list <b>all lines</b> of the PO.
+    </div></div>
+
+    <div class="step"><div class="num">6</div><div>
+      <b>Amazon gives you a <code>transactionId</code>.</b><br>
+      This is only a receipt that says "we got your message". It does <b>not</b> mean Amazon accepted your answer.
+    </div></div>
+
+    <div class="step"><div class="num">7</div><div>
+      <b>DOMS checks the receipt (<code>getTransactionStatus</code>).</b>
+      <table>
+        <tr><th>Status</th><th>Meaning</th></tr>
+        <tr><td>Processing</td><td>Amazon is still working. Check again shortly.</td></tr>
+        <tr><td>Success</td><td>Amazon processed it.</td></tr>
+        <tr><td>Failure</td><td>Amazon refused it. The response lists the errors.</td></tr>
+      </table>
+    </div></div>
+
+    <div class="step"><div class="num">8</div><div>
+      <b>The warehouse picks, packs and ships.</b><br>
+      SAP and the WMS reserve the stock, create the delivery and hand the parcel to the carrier.
+    </div></div>
+
+    <div class="step"><div class="num">9</div><div>
+      <b>Tell Amazon it shipped.</b><br>
+      Send the shipment confirmation with the carrier, tracking number and boxes, through the Shipping API. Labels and packing slips come from the same API.
+    </div></div>
+
+    <div class="step"><div class="num">10</div><div>
+      <b>Send the invoice.</b><br>
+      Amazon uses it to pay you.
+    </div></div>
+  </section>
+
+  <section>
+    <h2>6. What if the order is cancelled on our side?</h2>
+    <p>Amazon has <b>no "cancel order" button in the API</b>. The only way to cancel is to answer the PO with a rejection (<code>02</code>).</p>
+    <svg width="780" height="230" viewBox="0 0 780 230" role="img" aria-label="Cancel decision">
+      <defs><marker id="a3" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#232f3e"/></marker></defs>
+      <rect x="10" y="80" width="150" height="60" rx="8" fill="#fdecea" stroke="#d13212"/>
+      <text x="85" y="108" text-anchor="middle" font-size="13" font-weight="bold">Cancel in DOMS</text>
+      <text x="85" y="126" text-anchor="middle" font-size="11">stock out / bad SKU</text>
+      <line x1="160" y1="110" x2="218" y2="110" stroke="#232f3e" stroke-width="2" marker-end="url(#a3)"/>
+      <polygon points="300,60 380,110 300,160 220,110" fill="#fff8e1" stroke="#febd69" stroke-width="2"/>
+      <text x="300" y="106" text-anchor="middle" font-size="12">Already</text>
+      <text x="300" y="122" text-anchor="middle" font-size="12">shipped?</text>
+      <line x1="380" y1="110" x2="458" y2="110" stroke="#232f3e" stroke-width="2" marker-end="url(#a3)"/>
+      <text x="418" y="102" text-anchor="middle" font-size="11">No</text>
+      <rect x="460" y="80" width="170" height="60" rx="8" fill="#e8f5e9" stroke="#2e7d32"/>
+      <text x="545" y="105" text-anchor="middle" font-size="12" font-weight="bold">Send 02 rejection</text>
+      <text x="545" y="123" text-anchor="middle" font-size="11">then verify with getOrder</text>
+      <line x1="300" y1="160" x2="300" y2="195" stroke="#232f3e" stroke-width="2" marker-end="url(#a3)"/>
+      <text x="312" y="182" font-size="11">Yes</text>
+      <rect x="200" y="196" width="400" height="30" rx="6" fill="#fdecea" stroke="#d13212"/>
+      <text x="400" y="216" text-anchor="middle" font-size="12">API can't cancel. Contact Amazon Vendor Support.</text>
+    </svg>
+    <div class="warn">
+      <b>Not yet confirmed:</b> whether Amazon accepts a <code>02</code> after you already sent a <code>00</code>. It may return a Failure with an error. Test it in production on a PO you really intend to cancel, and read the result from <code>getTransactionStatus</code> and <code>getOrder</code>.
+    </div>
+    <div class="ok">
+      <b>Best practice:</b> check stock and SKU <i>before</i> sending the first <code>00</code>. Then you will rarely need to cancel.
+    </div>
+  </section>
+
+  <section>
+    <h2>7. How to know the result is real</h2>
+    <table>
+      <tr><th>You see...</th><th>It means...</th></tr>
+      <tr><td><code>transactionId</code> only</td><td>Amazon received the request. Nothing is confirmed.</td></tr>
+      <tr><td>Status <code>Success</code></td><td>Amazon processed it. Still confirm with <code>getOrder</code>.</td></tr>
+      <tr><td>Status <code>Failure</code> + errors</td><td>Amazon refused it. Read the error and fix it.</td></tr>
+      <tr><td><code>getOrder</code> shows the order as cancelled or rejected</td><td>The cancellation is real. Mark it cancelled in DOMS.</td></tr>
+      <tr><td><code>mock-TransactionId...</code> or always "Processing"</td><td>You are in the <b>sandbox</b>. It is a test, and nothing really happened.</td></tr>
+    </table>
+  </section>
+
+  <section>
+    <h2>8. The same flow as a story (a worked example)</h2>
+    <ol>
+      <li>Priya orders a kettle on Amazon on Monday.</li>
+      <li>Amazon creates PO <code>6K9Z13PL</code> and publishes it.</li>
+      <li>DOMS pulls it in the morning and creates the order in SAP.</li>
+      <li>Stock is available, so DOMS sends <code>00</code>, which means "we will ship it all".</li>
+      <li>Amazon returns a <code>transactionId</code>, and DOMS later sees <code>Success</code>.</li>
+      <li>The warehouse packs the kettle and the carrier collects it.</li>
+      <li>DOMS sends Amazon the tracking number, then the invoice.</li>
+      <li>Priya gets her kettle, and Amazon pays you.</li>
+    </ol>
+    <p><b>Alternative ending:</b> the warehouse finds the kettle is damaged and out of stock. DOMS sends <code>02</code> with the reason, checks <code>getOrder</code>, and only then marks the order cancelled.</p>
+  </section>
+
+  <section>
+    <h2>9. Quick glossary</h2>
+    <table>
+      <tr><th>Term</th><th>Meaning</th></tr>
+      <tr><td>VDF</td><td>Vendor Direct Fulfillment. You ship straight to Amazon's customer.</td></tr>
+      <tr><td>PO</td><td>Purchase Order. Amazon's request for you to supply goods.</td></tr>
+      <tr><td>SP-API</td><td>Amazon's API for sellers and vendors.</td></tr>
+      <tr><td>Acknowledgement</td><td>Your yes or no to a PO.</td></tr>
+      <tr><td>Transaction ID</td><td>A receipt number for something you submitted.</td></tr>
+      <tr><td>SKU</td><td>The product's stock code.</td></tr>
+      <tr><td>IDoc (ORDERS05)</td><td>The SAP message format used to create a sales order.</td></tr>
+      <tr><td>DOMS</td><td>Your order management module.</td></tr>
+      <tr><td>Sandbox</td><td>Amazon's test area. Results are fake and static.</td></tr>
+    </table>
+  </section>
+
+  <section>
+    <h2>10. Things still to confirm with Amazon</h2>
+    <ul>
+      <li>Whether a <code>02</code> is accepted after a <code>00</code>.</li>
+      <li>The full list of allowed <code>02</code> reason texts. See Amazon's "Submit an acknowledgement" guide in the SP-API docs.</li>
+      <li>The exact order status values <code>getOrder</code> returns after a rejection.</li>
+    </ul>
+  </section>
+
+</main>
+<footer>Prepared from the integration discussion. Items marked "not yet confirmed" should be verified in production or with Amazon.</footer>
+</body>
+</html>
