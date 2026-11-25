@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Shopify Order Flow with DOMS - End to End, Explained Simply</title>
+  <style>
+    body { font-family: Arial, Helvetica, sans-serif; color: #1f2d1f; background: #f4f6f4; margin: 0; line-height: 1.6; }
+    header { background: #004c3f; color: #fff; padding: 32px 20px; text-align: center; }
+    header h1 { margin: 0 0 8px; font-size: 28px; }
+    header p { margin: 0; color: #a8e6a1; }
+    main { max-width: 980px; margin: 0 auto; padding: 20px; }
+    section { background: #fff; border-radius: 10px; padding: 22px 26px; margin: 22px 0; box-shadow: 0 1px 4px rgba(0,0,0,.12); }
+    h2 { margin-top: 0; color: #008060; border-bottom: 2px solid #a8e6a1; padding-bottom: 6px; }
+    .note { background: #fff8e1; border-left: 5px solid #febd69; padding: 10px 14px; margin: 14px 0; }
+    .warn { background: #fdecea; border-left: 5px solid #d13212; padding: 10px 14px; margin: 14px 0; }
+    .ok { background: #e8f5e9; border-left: 5px solid #2e7d32; padding: 10px 14px; margin: 14px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 12px 0; }
+    th, td { border: 1px solid #cfd6dd; padding: 8px 10px; text-align: left; vertical-align: top; }
+    th { background: #004c3f; color: #fff; }
+    svg { max-width: 100%; height: auto; display: block; margin: 14px auto; }
+    code { background: #eef1f4; padding: 1px 5px; border-radius: 3px; }
+    .step { display: flex; gap: 14px; margin: 14px 0; }
+    .num { flex: 0 0 38px; height: 38px; border-radius: 50%; background: #008060; color: #fff; font-weight: bold; text-align: center; line-height: 38px; }
+    footer { text-align: center; color: #667; font-size: 13px; padding: 20px; }
+  </style>
+</head>
+<body>
+<header>
+  <h1>Shopify Orders and DOMS</h1>
+  <p>The whole journey of an order, from the customer's checkout to the parcel on the doorstep</p>
+</header>
+
+<main>
+
+  <section>
+    <h2>1. The one-minute story</h2>
+    <p>Shopify is <b>your own online shop</b>. The customers are yours and the money comes to you. Behind the shop is your warehouse.</p>
+    <ul>
+      <li>A customer pays for an item on your Shopify store.</li>
+      <li>Shopify records the order, but it does <b>not</b> hold your stock or ship anything.</li>
+      <li>So Shopify tells DOMS: "A new order arrived."</li>
+      <li>DOMS creates the order in your systems, the warehouse ships it, and tracking goes back to Shopify so the customer is notified.</li>
+    </ul>
+    <svg width="780" height="170" viewBox="0 0 780 170" role="img" aria-label="Customer to Shopify to DOMS to warehouse">
+      <defs><marker id="s1" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#1f2d1f"/></marker></defs>
+      <rect x="5" y="45" width="150" height="80" rx="10" fill="#c8e6c9"/>
+      <text x="80" y="82" text-anchor="middle" font-size="16" font-weight="bold">CUSTOMER</text>
+      <text x="80" y="102" text-anchor="middle" font-size="12">Pays at checkout</text>
+      <rect x="205" y="45" width="150" height="80" rx="10" fill="#008060"/>
+      <text x="280" y="82" text-anchor="middle" font-size="16" font-weight="bold" fill="#fff">SHOPIFY</text>
+      <text x="280" y="102" text-anchor="middle" font-size="12" fill="#fff">Records the order</text>
+      <rect x="405" y="45" width="150" height="80" rx="10" fill="#146eb4"/>
+      <text x="480" y="82" text-anchor="middle" font-size="16" font-weight="bold" fill="#fff">DOMS</text>
+      <text x="480" y="102" text-anchor="middle" font-size="12" fill="#fff">Creates your order</text>
+      <rect x="605" y="45" width="170" height="80" rx="10" fill="#febd69"/>
+      <text x="690" y="82" text-anchor="middle" font-size="16" font-weight="bold">SAP / WAREHOUSE</text>
+      <text x="690" y="102" text-anchor="middle" font-size="12">Picks, packs, ships</text>
+      <line x1="155" y1="85" x2="203" y2="85" stroke="#1f2d1f" stroke-width="2.5" marker-end="url(#s1)"/>
+      <line x1="355" y1="85" x2="403" y2="85" stroke="#1f2d1f" stroke-width="2.5" marker-end="url(#s1)"/>
+      <line x1="555" y1="85" x2="603" y2="85" stroke="#1f2d1f" stroke-width="2.5" marker-end="url(#s1)"/>
+      <text x="380" y="35" text-anchor="middle" font-size="12">Order alert (webhook)</text>
+      <line x1="605" y1="145" x2="285" y2="145" stroke="#1f2d1f" stroke-width="2" marker-end="url(#s1)"/>
+      <text x="445" y="162" text-anchor="middle" font-size="12">Tracking number goes back to Shopify</text>
+    </svg>
+  </section>
+
+  <section>
+    <h2>2. Why does DOMS pull or receive the order?</h2>
+    <table>
+      <tr><th>Question</th><th>Simple answer</th></tr>
+      <tr><td>Why doesn't Shopify handle everything?</td><td>Shopify sells and takes payment. Your stock, warehouse and carriers live in your own systems.</td></tr>
+      <tr><td>Why create it in DOMS?</td><td>DOMS holds the order together with those from your other channels, so stock, shipping and reporting run from one place.</td></tr>
+      <tr><td>Who checks we can ship?</td><td>Your systems do. Shopify only knows the stock count it was given.</td></tr>
+      <tr><td>Does Shopify ask us to accept the order?</td><td>No. The order is confirmed once the customer pays. Unlike Amazon, there is no acknowledgement step.</td></tr>
+    </table>
+  </section>
+
+  <section>
+    <h2>3. The cast of characters</h2>
+    <table>
+      <tr><th>Who / what</th><th>Role</th></tr>
+      <tr><td>Customer</td><td>Buys on your store</td></tr>
+      <tr><td>Shopify</td><td>Storefront, checkout and payment</td></tr>
+      <tr><td>Webhook</td><td>An instant "new order" alert Shopify pushes to DOMS</td></tr>
+      <tr><td>Shopify Admin API</td><td>How DOMS reads orders and sends back fulfillment, cancellations and refunds</td></tr>
+      <tr><td>DOMS</td><td>Your order management module</td></tr>
+      <tr><td>SAP / WMS</td><td>Reserves stock, picks, packs and ships</td></tr>
+      <tr><td>Carrier</td><td>Delivers the parcel</td></tr>
+    </table>
+  </section>
+
+  <section>
+    <h2>4. End-to-end flow</h2>
+    <svg width="880" height="470" viewBox="0 0 880 470" role="img" aria-label="Shopify end to end sequence">
+      <defs><marker id="s2" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#1f2d1f"/></marker></defs>
+      <rect x="10" y="10" width="200" height="40" rx="6" fill="#008060"/>
+      <text x="110" y="35" text-anchor="middle" fill="#fff" font-weight="bold">SHOPIFY</text>
+      <rect x="340" y="10" width="200" height="40" rx="6" fill="#146eb4"/>
+      <text x="440" y="35" text-anchor="middle" fill="#fff" font-weight="bold">DOMS</text>
+      <rect x="670" y="10" width="200" height="40" rx="6" fill="#b26a00"/>
+      <text x="770" y="35" text-anchor="middle" fill="#fff" font-weight="bold">SAP / WAREHOUSE</text>
+      <line x1="110" y1="50" x2="110" y2="460" stroke="#9aa5b1" stroke-dasharray="5,5"/>
+      <line x1="440" y1="50" x2="440" y2="460" stroke="#9aa5b1" stroke-dasharray="5,5"/>
+      <line x1="770" y1="50" x2="770" y2="460" stroke="#9aa5b1" stroke-dasharray="5,5"/>
+      <text x="110" y="82" text-anchor="middle" font-size="12">1. Customer pays</text>
+      <line x1="110" y1="110" x2="438" y2="110" stroke="#1f2d1f" stroke-width="2" marker-end="url(#s2)"/>
+      <text x="275" y="103" text-anchor="middle" font-size="12">2. Webhook: new order</text>
+      <line x1="440" y1="145" x2="112" y2="145" stroke="#1f2d1f" stroke-width="2" marker-end="url(#s2)"/>
+      <text x="275" y="138" text-anchor="middle" font-size="12">3. Fetch full order details</text>
+      <line x1="440" y1="185" x2="768" y2="185" stroke="#1f2d1f" stroke-width="2" marker-end="url(#s2)"/>
+      <text x="605" y="178" text-anchor="middle" font-size="12">4. Create the order (IDoc)</text>
+      <text x="770" y="222" text-anchor="middle" font-size="12">5. Allocate, pick, pack</text>
+      <line x1="770" y1="255" x2="442" y2="255" stroke="#1f2d1f" stroke-width="2" marker-end="url(#s2)"/>
+      <text x="605" y="248" text-anchor="middle" font-size="12">6. Shipped + tracking</text>
+      <line x1="440" y1="295" x2="112" y2="295" stroke="#1f2d1f" stroke-width="2" marker-end="url(#s2)"/>
+      <text x="275" y="288" text-anchor="middle" font-size="12">7. Create fulfillment + tracking</text>
+      <text x="110" y="335" text-anchor="middle" font-size="12">8. Customer is emailed</text>
+      <line x1="110" y1="375" x2="438" y2="375" stroke="#1f2d1f" stroke-width="2" marker-end="url(#s2)"/>
+      <text x="275" y="368" text-anchor="middle" font-size="12">9. Optional: later updates (return, cancel)</text>
+      <text x="440" y="440" text-anchor="middle" font-size="13" font-weight="bold">Payout reaches you through Shopify Payments or your gateway</text>
+    </svg>
+  </section>
+
+  <section>
+    <h2>5. The flow, step by step</h2>
+
+    <div class="step"><div class="num">1</div><div><b>Customer checks out.</b><br>The payment is taken. Shopify creates the order with a number such as <code>#1042</code>.</div></div>
+
+    <div class="step"><div class="num">2</div><div><b>Shopify alerts DOMS (webhook, e.g. <code>orders/create</code>).</b><br>It is like a doorbell. DOMS doesn't have to keep asking. As a safety net, DOMS also asks the Orders API on a schedule, in case an alert was missed.</div></div>
+
+    <div class="step"><div class="num">3</div><div><b>DOMS reads the full order.</b><br>Items, quantities, prices, taxes, shipping address, shipping method and customer details.</div></div>
+
+    <div class="step"><div class="num">4</div><div><b>DOMS creates the order and releases it to SAP/WMS.</b><br>It stores the Shopify order ID so everything can be matched later. Duplicate alerts are ignored using that ID.</div></div>
+
+    <div class="step"><div class="num">5</div><div><b>The warehouse picks, packs and ships.</b><br>Stock is reserved and the parcel is handed to the carrier.</div></div>
+
+    <div class="step"><div class="num">6</div><div><b>DOMS sends the fulfillment back to Shopify.</b><br>It carries the carrier name and tracking number. Shopify marks the order <b>Fulfilled</b> and emails the customer.</div></div>
+  </section>
+
+  <section>
+    <h2>6. What if the order is cancelled?</h2>
+    <p>With Shopify <b>you control the cancellation</b>. There is no partner to ask, which makes it simpler than Amazon.</p>
+    <table>
+      <tr><th>Situation</th><th>What to do</th></tr>
+      <tr><td>Cancelled <b>before shipping</b></td><td>Cancel the order in Shopify (Admin or API). Choose whether to refund the payment and whether to restock the items.</td></tr>
+      <tr><td>Part of the order can't ship</td><td>Refund or remove only those lines, and ship the rest.</td></tr>
+      <tr><td>Already <b>shipped</b></td><td>It can't be cancelled. Handle it as a return and refund.</td></tr>
+    </table>
+    <div class="warn"><b>Keep both sides in step.</b> If DOMS cancels but Shopify is not updated, the customer still sees an active order and may still be charged. Cancel in Shopify as well, then confirm the order status there.</div>
+  </section>
+
+  <section>
+    <h2>7. Worked example</h2>
+    <ol>
+      <li>Ravi buys a backpack on your store and pays.</li>
+      <li>Shopify sends DOMS a webhook, and DOMS fetches order <code>#1042</code>.</li>
+      <li>DOMS creates the order in SAP and the warehouse starts work.</li>
+      <li>The backpack is packed and handed to the carrier.</li>
+      <li>DOMS sends the tracking number to Shopify, and Ravi gets a shipping email.</li>
+    </ol>
+    <p><b>Alternative ending:</b> the stock count was wrong and the backpack isn't available. DOMS cancels the order in Shopify with a refund, and Ravi is told.</p>
+  </section>
+
+  <section>
+    <h2>8. Good practice for DOMS</h2>
+    <ul>
+      <li>Verify every webhook before trusting it. Shopify signs each one, and the check uses your secret from a secret store, never from code.</li>
+      <li>Ignore duplicates. Shopify may send the same alert more than once.</li>
+      <li>Keep a scheduled catch-up poll for missed alerts.</li>
+      <li>Store the Shopify order ID and fulfillment ID in DOMS.</li>
+      <li>Watch for API rate limits and retry with a delay.</li>
+      <li>Keep inventory counts in Shopify in step with your warehouse to avoid overselling.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>9. Glossary</h2>
+    <table>
+      <tr><th>Term</th><th>Meaning</th></tr>
+      <tr><td>Webhook</td><td>An automatic message Shopify sends when something happens, such as a new order.</td></tr>
+      <tr><td>Admin API</td><td>Shopify's interface for reading and updating orders.</td></tr>
+      <tr><td>Fulfillment</td><td>Shopify's record that items have shipped, with tracking.</td></tr>
+      <tr><td>Refund</td><td>Returning money to the customer.</td></tr>
+      <tr><td>Restock</td><td>Adding cancelled items back to inventory.</td></tr>
+      <tr><td>DOMS</td><td>Your order management module.</td></tr>
+    </table>
+    <div class="note">This is a general description of the Shopify flow. I haven't seen your DOMS design, so confirm the details (webhook topics, API version, fulfillment method) against your integration and Shopify's current documentation.</div>
+  </section>
+
+</main>
+<footer>Prepared from the integration discussion.</footer>
+</body>
+</html>

@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Amazon VDF vs Shopify - Comparison for DOMS</title>
+  <style>
+    body { font-family: Arial, Helvetica, sans-serif; color: #232f3e; background: #f4f6f8; margin: 0; line-height: 1.6; }
+    header { background: linear-gradient(90deg, #232f3e 50%, #004c3f 50%); color: #fff; padding: 32px 20px; text-align: center; }
+    header h1 { margin: 0 0 8px; font-size: 28px; }
+    header p { margin: 0; color: #fde7b0; }
+    main { max-width: 1000px; margin: 0 auto; padding: 20px; }
+    section { background: #fff; border-radius: 10px; padding: 22px 26px; margin: 22px 0; box-shadow: 0 1px 4px rgba(0,0,0,.12); }
+    h2 { margin-top: 0; color: #146eb4; border-bottom: 2px solid #febd69; padding-bottom: 6px; }
+    .note { background: #fff8e1; border-left: 5px solid #febd69; padding: 10px 14px; margin: 14px 0; }
+    .warn { background: #fdecea; border-left: 5px solid #d13212; padding: 10px 14px; margin: 14px 0; }
+    table { border-collapse: collapse; width: 100%; margin: 12px 0; }
+    th, td { border: 1px solid #cfd6dd; padding: 8px 10px; text-align: left; vertical-align: top; }
+    th { background: #232f3e; color: #fff; }
+    th.sh { background: #004c3f; }
+    td:first-child { font-weight: bold; background: #f4f6f8; width: 22%; }
+    svg { max-width: 100%; height: auto; display: block; margin: 14px auto; }
+    code { background: #eef1f4; padding: 1px 5px; border-radius: 3px; }
+    footer { text-align: center; color: #667; font-size: 13px; padding: 20px; }
+  </style>
+</head>
+<body>
+<header>
+  <h1>Amazon VDF vs Shopify</h1>
+  <p>How the two order flows differ for DOMS</p>
+</header>
+
+<main>
+
+  <section>
+    <h2>1. The core difference in one picture</h2>
+    <svg width="900" height="330" viewBox="0 0 900 330" role="img" aria-label="Amazon and Shopify flows side by side">
+      <defs><marker id="c1" markerWidth="10" markerHeight="10" refX="8" refY="3" orient="auto"><path d="M0,0 L0,6 L9,3 z" fill="#232f3e"/></marker></defs>
+      <rect x="5" y="5" width="435" height="320" rx="10" fill="#fdf3e0" stroke="#febd69"/>
+      <text x="222" y="30" text-anchor="middle" font-size="16" font-weight="bold">AMAZON VDF</text>
+      <rect x="20" y="50" width="120" height="44" rx="6" fill="#febd69"/>
+      <text x="80" y="77" text-anchor="middle" font-size="12" font-weight="bold">Amazon sends PO</text>
+      <rect x="160" y="50" width="120" height="44" rx="6" fill="#146eb4"/>
+      <text x="220" y="77" text-anchor="middle" font-size="12" fill="#fff" font-weight="bold">DOMS pulls it</text>
+      <rect x="300" y="50" width="125" height="44" rx="6" fill="#d13212"/>
+      <text x="362" y="70" text-anchor="middle" font-size="11" fill="#fff" font-weight="bold">Acknowledge</text>
+      <text x="362" y="84" text-anchor="middle" font-size="11" fill="#fff">00 / 02 in 24h</text>
+      <line x1="140" y1="72" x2="158" y2="72" stroke="#232f3e" stroke-width="2" marker-end="url(#c1)"/>
+      <line x1="280" y1="72" x2="298" y2="72" stroke="#232f3e" stroke-width="2" marker-end="url(#c1)"/>
+      <rect x="20" y="130" width="190" height="44" rx="6" fill="#e8eef5"/>
+      <text x="115" y="157" text-anchor="middle" font-size="12">Warehouse ships</text>
+      <rect x="235" y="130" width="190" height="44" rx="6" fill="#e8eef5"/>
+      <text x="330" y="157" text-anchor="middle" font-size="12">Shipment confirmation</text>
+      <rect x="20" y="210" width="190" height="44" rx="6" fill="#e8eef5"/>
+      <text x="115" y="237" text-anchor="middle" font-size="12">Invoice to Amazon</text>
+      <rect x="235" y="210" width="190" height="44" rx="6" fill="#e8eef5"/>
+      <text x="330" y="237" text-anchor="middle" font-size="12">Amazon pays you</text>
+      <text x="222" y="290" text-anchor="middle" font-size="12">Cancel = reject via acknowledgement</text>
+
+      <rect x="460" y="5" width="435" height="320" rx="10" fill="#e6f4ef" stroke="#008060"/>
+      <text x="677" y="30" text-anchor="middle" font-size="16" font-weight="bold">SHOPIFY</text>
+      <rect x="475" y="50" width="120" height="44" rx="6" fill="#008060"/>
+      <text x="535" y="77" text-anchor="middle" font-size="12" fill="#fff" font-weight="bold">Customer pays</text>
+      <rect x="615" y="50" width="120" height="44" rx="6" fill="#146eb4"/>
+      <text x="675" y="70" text-anchor="middle" font-size="11" fill="#fff" font-weight="bold">Webhook to</text>
+      <text x="675" y="84" text-anchor="middle" font-size="11" fill="#fff" font-weight="bold">DOMS</text>
+      <rect x="755" y="50" width="125" height="44" rx="6" fill="#c8e6c9"/>
+      <text x="817" y="70" text-anchor="middle" font-size="11" font-weight="bold">No acknowledge</text>
+      <text x="817" y="84" text-anchor="middle" font-size="11">step needed</text>
+      <line x1="595" y1="72" x2="613" y2="72" stroke="#232f3e" stroke-width="2" marker-end="url(#c1)"/>
+      <line x1="735" y1="72" x2="753" y2="72" stroke="#232f3e" stroke-width="2" marker-end="url(#c1)"/>
+      <rect x="475" y="130" width="190" height="44" rx="6" fill="#dcebe6"/>
+      <text x="570" y="157" text-anchor="middle" font-size="12">Warehouse ships</text>
+      <rect x="690" y="130" width="190" height="44" rx="6" fill="#dcebe6"/>
+      <text x="785" y="157" text-anchor="middle" font-size="12">Fulfillment + tracking</text>
+      <rect x="475" y="210" width="190" height="44" rx="6" fill="#dcebe6"/>
+      <text x="570" y="237" text-anchor="middle" font-size="12">Customer emailed</text>
+      <rect x="690" y="210" width="190" height="44" rx="6" fill="#dcebe6"/>
+      <text x="785" y="237" text-anchor="middle" font-size="12">Payout from gateway</text>
+      <text x="677" y="290" text-anchor="middle" font-size="12">Cancel = you cancel and refund in Shopify</text>
+    </svg>
+    <div class="note"><b>One line:</b> with Amazon you <i>fulfil an order that Amazon owns</i> and must answer it. With Shopify you <i>fulfil your own store's order</i> and nobody needs to approve it.</div>
+  </section>
+
+  <section>
+    <h2>2. Side-by-side comparison</h2>
+    <table>
+      <tr><th>Topic</th><th>Amazon VDF</th><th class="sh">Shopify</th></tr>
+      <tr><td>Who owns the customer</td><td>Amazon</td><td>You</td></tr>
+      <tr><td>What you receive</td><td>A Purchase Order (PO) from Amazon</td><td>A customer order from your own store</td></tr>
+      <tr><td>How orders reach DOMS</td><td>DOMS polls <code>getOrders</code> and pages through results</td><td>A webhook pushes it (e.g. <code>orders/create</code>), with a catch-up poll as backup</td></tr>
+      <tr><td>Accept or reject step</td><td>Required. Acknowledge within 24 hours: <code>00</code> accept, <code>02</code> reject</td><td>None. The order is confirmed when the customer pays</td></tr>
+      <tr><td>Partial acceptance</td><td>Not allowed. Accept or reject the whole order</td><td>Possible. Refund or remove lines and ship the rest</td></tr>
+      <tr><td>Cancelling an order</td><td>No cancel API. Reject via acknowledgement, only before shipment. A <code>02</code> after <code>00</code> is unconfirmed</td><td>You cancel it yourself (Admin or API), choosing refund and restock</td></tr>
+      <tr><td>After shipping</td><td>Can't cancel. Contact Vendor Support or handle as a return</td><td>Can't cancel. Handle as a return and refund</td></tr>
+      <tr><td>Telling the platform it shipped</td><td>Shipment confirmation through the Shipping API, plus labels and packing slips</td><td>Create a fulfillment with carrier and tracking</td></tr>
+      <tr><td>Invoicing</td><td>You send an invoice to Amazon</td><td>Not needed. Shopify holds the sale</td></tr>
+      <tr><td>Who confirms your request worked</td><td><code>transactionId</code>, then <code>getTransactionStatus</code> (Processing, Success, Failure)</td><td>The API response itself, in most cases</td></tr>
+      <tr><td>Getting paid</td><td>Amazon pays you after the invoice</td><td>Payout from Shopify Payments or your gateway</td></tr>
+      <tr><td>Authentication</td><td>LWA access token in <code>x-amz-access-token</code></td><td>Admin API access token for the store</td></tr>
+      <tr><td>Test environment</td><td>Sandbox returns static, fake results</td><td>Development store with real behaviour</td></tr>
+      <tr><td>Who sets the rules</td><td>Amazon (deadlines, metrics, chargebacks)</td><td>You</td></tr>
+    </table>
+  </section>
+
+  <section>
+    <h2>3. What it means for DOMS</h2>
+    <table>
+      <tr><th>Area</th><th>Amazon</th><th class="sh">Shopify</th></tr>
+      <tr><td>Intake</td><td>Scheduled polling job</td><td>Webhook listener plus a catch-up job</td></tr>
+      <tr><td>Order state before release</td><td>"Awaiting acknowledgement" until Amazon confirms</td><td>Release straight away</td></tr>
+      <tr><td>Extra tracking needed</td><td>Store every <code>transactionId</code> and its code</td><td>Store the Shopify order ID and fulfillment ID</td></tr>
+      <tr><td>Cancel handling</td><td>Keep a "cancel pending at Amazon" state until <code>getOrder</code> confirms</td><td>Cancel in Shopify, then confirm the order status</td></tr>
+      <tr><td>Main risks</td><td>Missing the 24-hour window, rejected acknowledgements, metrics hits</td><td>Missed or duplicate webhooks, overselling from stale stock</td></tr>
+    </table>
+    <div class="warn"><b>Common mistake in both:</b> marking the order cancelled in DOMS before the platform confirms it. The customer or Amazon then still sees an active order.</div>
+  </section>
+
+  <section>
+    <h2>4. What stays the same</h2>
+    <ul>
+      <li>The platform sells, and <b>you fulfil</b>. Stock, warehouse and carrier stay in your systems.</li>
+      <li>DOMS creates its own order from the platform's order and releases it to SAP/WMS.</li>
+      <li>Tracking is sent back to the platform after shipment.</li>
+      <li>Orders can't be cancelled after they ship.</li>
+      <li>Both need duplicate protection, retries, and logs that never include tokens or personal data.</li>
+    </ul>
+  </section>
+
+  <section>
+    <h2>5. A quick way to remember it</h2>
+    <table>
+      <tr><th>Think of it as...</th><th>Amazon VDF</th><th class="sh">Shopify</th></tr>
+      <tr><td>Analogy</td><td>A big shop sends you a request and expects a reply and a schedule</td><td>Your own shop shouts "order!" and you simply get on with it</td></tr>
+      <tr><td>Key words</td><td>PO, acknowledgement, transaction, invoice</td><td>Webhook, fulfillment, refund, restock</td></tr>
+    </table>
+    <div class="note">This is a general comparison. I haven't seen your DOMS design, and the open Amazon items (a <code>02</code> after <code>00</code>, the full reject reason list) still need to be confirmed. Check Shopify specifics (webhook topics, API version) against Shopify's current documentation.</div>
+  </section>
+
+</main>
+<footer>Prepared from the integration discussion.</footer>
+</body>
+</html>
